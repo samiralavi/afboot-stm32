@@ -6,20 +6,21 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 OBJDUMP = $(CROSS_COMPILE)objdump
 SIZE = $(CROSS_COMPILE)size
 GDB = $(CROSS_COMPILE)gdb
-OPENOCD = openocd
-KERNEL_ADDR?=0x08008000
-DTB_ADDR?=0x08004000
+OPENOCD = /usr/local/bin/openocd
+KERNEL_ADDR?=0x90008000
+DTB_ADDR?=0x90004000
 
 CFLAGS := -mthumb -mcpu=cortex-m4
 CFLAGS += -ffunction-sections -fdata-sections
-CFLAGS += -Os -std=gnu99 -Wall
+#CFLAGS += -O2 -std=gnu99 -Wall -g
+CFLAGS += -Os -std=gnu99 -Wall -g
 LINKERFLAGS := -nostartfiles --gc-sections
 
 obj-y += gpio.o mpu.o qspi.o start_kernel.o
 obj-f4 += $(obj-y) usart-f4.o
 obj-f7 += $(obj-y) usart-f7.o
 
-all: stm32f429i-disco stm32429i-eval stm32f469i-disco stm32746g-eval stm32h743i-eval
+all: stm32f429i-disco stm32429i-eval stm32f469i-disco stm32746g-eval stm32f746g-disco stm32h743i-eval
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) -DKERNEL_ADDR=$(KERNEL_ADDR) -DDTB_ADDR=$(DTB_ADDR) $< -o $@
@@ -43,6 +44,11 @@ stm32746g-eval: stm32746g-eval.o $(obj-f7)
 	$(LD) -T stm32f429.lds $(LINKERFLAGS) -o stm32746g-eval.elf stm32746g-eval.o $(obj-f7)
 	$(OBJCOPY) -Obinary stm32746g-eval.elf stm32746g-eval.bin
 	$(SIZE) stm32746g-eval.elf
+
+stm32f746g-disco: stm32f746g-disco.o $(obj-f7)
+	$(LD) -T stm32f429.lds $(LINKERFLAGS) -o stm32f746g-disco.elf stm32f746g-disco.o $(obj-f7)
+	$(OBJCOPY) -Obinary stm32f746g-disco.elf stm32f746g-disco.bin
+	$(SIZE) stm32f746g-disco.elf
 
 stm32h743i-eval: stm32h743i-eval.o $(obj-f7)
 	$(LD) -T stm32h743.lds $(LINKERFLAGS) -o stm32h743i-eval.elf stm32h743i-eval.o $(obj-f7)
@@ -92,6 +98,30 @@ flash_stm32746g-eval: stm32746g-eval
 	  -c "reset run" \
 	  -c "shutdown"
 
+flash_stm32f746g-disco: stm32f746g-disco
+	$(OPENOCD) -f board/stm32f746g-disco_stlink.cfg \
+	  -c "init" \
+	  -c "reset init" \
+	  -c "flash probe 0" \
+	  -c "flash info 0" \
+	  -c "flash write_image erase stm32f746g-disco.bin 0x08000000" \
+	  -c "reset run" \
+	  -c "shutdown"
+
+fullflash_stm32f746g-disco: stm32f746g-disco
+	$(OPENOCD) -f board/stm32f746g-disco_stlink.cfg \
+	  -c "init" \
+	  -c "reset init" \
+	  -c "flash probe 0" \
+	  -c "flash info 0" \
+	  -c "flash probe 1" \
+	  -c "flash info 1" \
+	  -c "flash write_image erase stm32f746g-disco.bin 0x08000000" \
+	  -c "flash write_image erase $(DTBFILE) 0x90004000" \
+	  -c "flash write_image erase $(XIPFILE) 0x90008000" \
+	  -c "reset run" \
+	  -c "shutdown"
+
 flash_stm32h743i-eval: stm32h743i-eval
 	$(OPENOCD) -f interface/stlink-v2-1.cfg -f board/stm32h7xx_eval.cfg \
 	  -c "init" \
@@ -113,6 +143,9 @@ debug_stm32f469i-disco: stm32f469i-disco
 
 debug_stm32746g-eval: stm32746g-eval
 	$(GDB) stm32746g-eval.elf -ex "target remote :3333" -ex "monitor reset halt"
+
+debug_stm32f746g-disco: stm32f746g-disco
+	$(GDB) stm32f746g-disco.elf -ex "target remote :3333" -ex "monitor reset halt"
 
 debug_stm32h743i-eval: stm32h743i-eval
 	$(GDB) stm32h743i-eval.elf -ex "target remote :3333" -ex "monitor reset halt"
