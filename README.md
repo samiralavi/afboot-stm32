@@ -1,6 +1,13 @@
 # afboot-stm32
 Fork of https://github.com/afaerber/afboot-stm32
 
-For loading QSPI flash of stm32f746:
+In order to program the external flash on STM32 boards, the following OpenOCD patch is required.
 
-http://openocd.zylin.com/#/c/3162/
+http://openocd.zylin.com/#/c/4321/
+
+Steps:
+1- Git clone/checkout
+2- ./bootstrap
+3- ./configure
+4- make
+5 sudo make install (systemwide)
