@@ -20,7 +20,7 @@
 #error PLL clock does not match 216 MHz
 #endif
 
-static void *usart_base = (void *)USART6_BASE;
+static void *usart_base = (void *)USART1_BASE;
 static void *gpio_base = (void *)GPIOA_BASE;
 
 static void usart_putint(uint32_t);
@@ -115,7 +115,7 @@ int main(void)
 	};
 	int i;
 
-	//mpu_config(0xc0000000);
+	mpu_config(0xc0000000);
 
 	if (*FLASH_CR & FLASH_CR_LOCK) {
 		*FLASH_KEYR = 0x45670123;
@@ -251,7 +251,8 @@ static void kokot(void) {
 static void noop(void)
 {
 	usart_putch(usart_base, 'E');
-    //kokot();
+	while (1) {
+	}
 }
 
 extern unsigned int _end_text;
